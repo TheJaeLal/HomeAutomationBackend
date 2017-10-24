@@ -27,6 +27,11 @@ class Handler(tornado.web.StaticFileHandler):
             url_path = url_path + 'index.html'
         return url_path
 
+class Server(tornado.web.RequestHandler):
+    def get(self):
+        self.write("hello\n")
+        return
+
 
 def mkapp(prefix=''):
     if prefix:
@@ -35,6 +40,7 @@ def mkapp(prefix=''):
         path = '/(.*)'
 
     application = tornado.web.Application([
+        ("/test",Server),
         (path, Handler, {'path': os.getcwd()}),
     ], debug=True)
 
