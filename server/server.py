@@ -19,19 +19,64 @@ from argparse import ArgumentParser
 
 import tornado.ioloop
 import tornado.web
+import tornado.websocket
 
 
-class Handler(tornado.web.StaticFileHandler):
+class FileHandler(tornado.web.StaticFileHandler):
     def parse_url_path(self, url_path):
         if not url_path or url_path.endswith('/'):
             url_path = url_path + 'index.html'
         return url_path
 
-class Server(tornado.web.RequestHandler):
-    def get(self):
-        self.write("hello\n")
+class Handler(object):
+    def __init__(self):
+        pass
+    def set_connection(self,conn):
+        self.conn = conn
+        return
+    def write(self,message):
+        self.conn.write_message(message)
         return
 
+class Server(tornado.web.RequestHandler):
+
+    def initialize(self,handler):
+        self.handler = handler
+        self.handler.server = self
+        return
+
+    def get(self):
+        self.write("HELLO\n")
+        pass
+
+    @tornado.web.asynchronous
+    def post(self):
+        # data = tornado.escape.json_decode(self.request.body)
+        # print data['light']
+        data = self.request.body
+        self.handler.write(data)
+
+
+class Connection(tornado.websocket.WebSocketHandler):
+    def initialize(self,handler):
+        self.handler = handler
+        pass
+
+    def open(self):
+        print("Opened")
+        self.handler.set_connection(self)
+        return
+
+    def on_message(self,message):
+        print(message)
+        # self.write_message("Acknowledged!\n")
+        self.handler.server.write(message+"\n")
+        self.handler.server.finish()
+        return
+
+    def on_close(self):
+        print("Closed")
+        return
 
 def mkapp(prefix=''):
     if prefix:
@@ -39,9 +84,12 @@ def mkapp(prefix=''):
     else:
         path = '/(.*)'
 
+    handle = Handler()
+
     application = tornado.web.Application([
-        ("/test",Server),
-        (path, Handler, {'path': os.getcwd()}),
+        ("/light",Server,{'handler':handle}),
+        ("/connect",Connection,{'handler':handle}),
+        (path, FileHandler, {'path': os.getcwd()}),
     ], debug=True)
 
     return application
