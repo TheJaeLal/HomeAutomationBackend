@@ -1,4 +1,4 @@
-import websocket
+from websocket import enableTrace, WebSocketApp
 
 def on_message(ws, message):
     print(message)
