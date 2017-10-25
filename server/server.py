@@ -16,10 +16,12 @@ from __future__ import print_function
 import os
 import sys
 from argparse import ArgumentParser
+import json
 
 import tornado.ioloop
 import tornado.web
 import tornado.websocket
+import tornado.escape
 
 
 class FileHandler(tornado.web.StaticFileHandler):
@@ -38,7 +40,7 @@ class Handler(object):
         self.conn.write_message(message)
         return
 
-class Server(tornado.web.RequestHandler):
+class LightServer(tornado.web.RequestHandler):
 
     def initialize(self,handler):
         self.handler = handler
@@ -51,9 +53,12 @@ class Server(tornado.web.RequestHandler):
 
     @tornado.web.asynchronous
     def post(self):
-        # data = tornado.escape.json_decode(self.request.body)
+        data = tornado.escape.json_decode(self.request.body)
         # print data['light']
-        data = self.request.body
+        # data = tornado.escape.json_encode(self.request.body.decode('utf-8'))
+        print(type(data))
+        data['type'] = 'light'
+        data = json.dumps(data)
         self.handler.write(data)
 
 
@@ -87,7 +92,7 @@ def mkapp(prefix=''):
     handle = Handler()
 
     application = tornado.web.Application([
-        ("/light",Server,{'handler':handle}),
+        ("/light",LightServer,{'handler':handle}),
         ("/connect",Connection,{'handler':handle}),
         (path, FileHandler, {'path': os.getcwd()}),
     ], debug=True)
