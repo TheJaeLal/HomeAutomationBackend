@@ -83,7 +83,7 @@ class FileHandler(tornado.web.StaticFileHandler):
     def parse_url_path(self, url_path):
         path = os.path.join(BASE,url_path)
         if not os.path.exists(path):
-            self.handle.fetch_media(url_path)
+            handle.fetch_media(url_path)
             Worker(path).start()
         if not url_path or url_path.endswith('/'):
             url_path = url_path + 'index.html'
@@ -97,6 +97,7 @@ class MediaServer(tornado.web.RequestHandler):
     @tornado.web.asynchronous
     def get(self):
         self.write(self.handler.media_list)
+        self.finish()
         pass
 
 
@@ -125,6 +126,8 @@ class LightServer(tornado.web.RequestHandler):
 
 
 def mkapp(prefix=''):
+    global handle
+
     if prefix:
         path = '/' + prefix + '/(.*)'
     else:

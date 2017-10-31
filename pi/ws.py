@@ -70,7 +70,7 @@ def get_list():
 def main():
     parse_args()
     websocket.enableTrace(True)
-    ws = websocket.WebSocketApp("ws://localhost:8000/connect",
+    ws = websocket.WebSocketApp("ws://139.59.65.16:8000/connect",
                               on_message = on_message,
                               on_error = on_error,
                               on_close = on_close)
