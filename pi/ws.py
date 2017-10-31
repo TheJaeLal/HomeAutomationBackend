@@ -1,6 +1,8 @@
 import websocket
 import json
 import sys
+import os
+import upload
 
 def parse_args():
     global lights
@@ -27,6 +29,8 @@ def on_message(ws, message):
         control = command['status']
         response = lights.control(light_no,control)
         reply = json.dumps(response)
+    elif command['type'] == 'Fetch':
+      upload.put(command['path'])
     ws.send(reply)
 
 def on_error(ws, error):
@@ -37,12 +41,31 @@ def on_close(ws):
 
 def on_open(ws):
     print("### OPEN ###")
+    response = get_list()
+    reply = dict()
+    reply['type'] = 'Directory List'
+    reply['response'] = response
+    reply = json.dumps(reply)
+    print(reply,type(reply))
+    ws.send(reply)
+
 
 def print_usage():
     print("USAGE: python3 ws.py [mac/pi]")
     sys.exit(0)
     return
 
+def get_list():
+    BASE = os.path.dirname(os.path.abspath(__file__))
+    static = os.path.join(BASE,'static')
+    response = dict()
+    for directory in os.listdir(static):
+      path = os.path.join(static,directory)
+      if os.path.isdir(path):
+        response[directory] = []
+        for file in os.listdir(path):
+          response[directory].append(file)
+    return response
 
 def main():
     parse_args()

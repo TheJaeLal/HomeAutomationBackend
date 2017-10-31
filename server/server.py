@@ -17,6 +17,9 @@ import os
 import sys
 from argparse import ArgumentParser
 import json
+import time
+
+from threading import Thread
 
 import tornado.ioloop
 import tornado.web
@@ -24,21 +27,78 @@ import tornado.websocket
 import tornado.escape
 
 
-class FileHandler(tornado.web.StaticFileHandler):
-    def parse_url_path(self, url_path):
-        if not url_path or url_path.endswith('/'):
-            url_path = url_path + 'index.html'
-        return url_path
+BASE = os.path.abspath(__file__)
+
+
+class Worker(Thread):
+    def __init__(self,path):
+        super().__init__()
+        self.path = path
+
+    def run(self):
+        while not os.path.exists(self.path):
+            continue
+        time.sleep(3)
+        return
 
 class Handler(object):
     def __init__(self):
+        # self.BASE = os.abspath(__file__)
         pass
     def set_connection(self,conn):
         self.conn = conn
         return
     def write(self,message):
-        self.conn.write_message(message)
+        self.conn.write_message(json.dumps(message))
         return
+    def fetch_media(self,path):
+        message = {'type':'Fetch','path':path}
+        self.write(message)
+        return
+
+class Connection(tornado.websocket.WebSocketHandler):
+    def initialize(self,handler):
+        self.handler = handler
+        pass
+
+    def open(self):
+        print("Opened")
+        self.handler.set_connection(self)
+        return
+
+    def on_message(self,message):
+        message_dict = eval(message)
+        self.handler.media_list = message_dict
+        print(message_dict)
+        # self.write_message("Acknowledged!\n")
+        # self.handler.server.write(message+"\n")
+        # self.handler.server.finish()
+        return
+
+    def on_close(self):
+        print("Closed")
+        return
+
+class FileHandler(tornado.web.StaticFileHandler):
+    def parse_url_path(self, url_path):
+        path = os.path.join(BASE,url_path)
+        if not os.path.exists(path):
+            self.handle.fetch_media(url_path)
+            Worker(path).start()
+        if not url_path or url_path.endswith('/'):
+            url_path = url_path + 'index.html'
+        return url_path   
+
+class MediaServer(tornado.web.RequestHandler):
+    def initialize(self,handler):
+        self.handler = handler
+        self.handler.server = self
+        return
+    @tornado.web.asynchronous
+    def get(self):
+        self.write(self.handler.media_list)
+        pass
+
 
 class LightServer(tornado.web.RequestHandler):
 
@@ -58,30 +118,11 @@ class LightServer(tornado.web.RequestHandler):
         # data = tornado.escape.json_encode(self.request.body.decode('utf-8'))
         print(type(data))
         data['type'] = 'light'
-        data = json.dumps(data)
         self.handler.write(data)
-
-
-class Connection(tornado.websocket.WebSocketHandler):
-    def initialize(self,handler):
-        self.handler = handler
         pass
 
-    def open(self):
-        print("Opened")
-        self.handler.set_connection(self)
-        return
 
-    def on_message(self,message):
-        print(message)
-        # self.write_message("Acknowledged!\n")
-        self.handler.server.write(message+"\n")
-        self.handler.server.finish()
-        return
 
-    def on_close(self):
-        print("Closed")
-        return
 
 def mkapp(prefix=''):
     if prefix:
@@ -94,6 +135,7 @@ def mkapp(prefix=''):
     application = tornado.web.Application([
         ("/light",LightServer,{'handler':handle}),
         ("/connect",Connection,{'handler':handle}),
+        ("/media",MediaServer,{'handler':handle}),
         (path, FileHandler, {'path': os.getcwd()}),
     ], debug=True)
 
