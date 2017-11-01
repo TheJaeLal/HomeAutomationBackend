@@ -68,7 +68,10 @@ class Connection(tornado.websocket.WebSocketHandler):
 
     def on_message(self,message):
         message_dict = eval(message)
-        self.handler.media_list = message_dict
+        if message_dict['type'] == 'media':
+            self.handler.media_list = message_dict
+        else:
+
         print(message_dict)
         # self.write_message("Acknowledged!\n")
         # self.handler.server.write(message+"\n")
@@ -85,6 +88,7 @@ class FileHandler(tornado.web.StaticFileHandler):
         if not os.path.exists(path):
             handle.fetch_media(url_path)
             Worker(path).start()
+            time.sleep(10)
         if not url_path or url_path.endswith('/'):
             url_path = url_path + 'index.html'
         return url_path   

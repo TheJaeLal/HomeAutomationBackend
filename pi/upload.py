@@ -1,4 +1,5 @@
 import pysftp
+import paramiko
 import os
 
 #local_file_path is going to be of the format.. 'static/videos/filename.mp4'
@@ -27,3 +28,44 @@ def put(local_file_path):
 	except FileNotFoundError:
 		print("FileNotFoundError")
 		server.close()
+
+def put_with_paramiko(local_file_path):
+
+	try:
+		remote_media_dir = local_file_path
+		remote_media_dir = os.path.join('/home/jay',remote_media_dir)
+
+		# path_to_key = os.path.join('ssh_key','id_rsa')
+
+		path_to_key = '/Users/meshde/Mehmood/HomeAutomationBackend/pi/ssh_key/id_rsa'
+
+
+		# Open a transport
+
+		host = "139.59.65.16"
+		port = 2222
+		transport = paramiko.Transport((host, port))
+
+		# Auth\
+		key = paramiko.RSAKey.from_private_key_file(path_to_key)
+		print("HERE")
+		username = "jay"
+		transport.connect(username = username, pkey = key)
+
+		print("****Connection Successful*****")
+
+		# Go!
+
+		sftp = paramiko.SFTPClient.from_transport(transport)
+
+		sftp.put(local_file_path,remote_media_dir)
+
+		print("Successfully uploaded file.")
+
+		sftp.close()
+		transport.close()
+
+	except FileNotFoundError:
+		print("FileNotFoundError")
+		sftp.close()
+		transport.close()

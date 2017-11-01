@@ -23,14 +23,21 @@ def on_message(ws, message):
     if command['type'] == 'light':
       if command['query'] == 'status':
         status = lights.get_status()
-        reply = json.dumps(status)
+        reply = dict()
+        reply['type'] = 'light'
+        reply['response'] = status
+        reply = json.dumps(reply)
       else:
         light_no = command['light']
         control = command['status']
         response = lights.control(light_no,control)
-        reply = json.dumps(response)
+        reply = dict()
+        reply['type'] = 'light'
+        reply['response'] = response
+        reply = json.dumps(reply)
     elif command['type'] == 'Fetch':
-      upload.put(command['path'])
+      print(command['path'])
+      upload.put_with_paramiko(command['path'])
     ws.send(reply)
 
 def on_error(ws, error):
@@ -43,7 +50,7 @@ def on_open(ws):
     print("### OPEN ###")
     response = get_list()
     reply = dict()
-    reply['type'] = 'Directory List'
+    reply['type'] = 'media'
     reply['response'] = response
     reply = json.dumps(reply)
     print(reply,type(reply))
