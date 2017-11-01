@@ -69,9 +69,9 @@ class Connection(tornado.websocket.WebSocketHandler):
     def on_message(self,message):
         message_dict = eval(message)
         if message_dict['type'] == 'media':
-            self.handler.media_list = message_dict
-        else:
-            self.handler.server.write(message)
+            self.handler.media_list = message_dict['response']
+        elif message_dict['type'] == '':
+            self.handler.server.write(json.dumps(message_dict['response']))
             self.handler.server.finish()
         print(message_dict)
         # self.write_message("Acknowledged!\n")
